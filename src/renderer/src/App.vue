@@ -47,7 +47,7 @@
 
 <script setup>
 import Versions from './components/Versions.vue'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref, toRaw } from 'vue'
 const ipcHandle = () => window.electron.ipcRenderer.send('ping')
 const parseUrls = window.api.parseUrls
 
@@ -65,6 +65,32 @@ const downloadStatuses = {
   displayResult: ' данные получены'
 }
 const currentStatus = ref(downloadStatuses.referenceWaiting)
+const numberOfStatuses = computed(() => {
+  const result = values.value.reduce((obg, { status }) => {
+    return (obg[status] = (obg[status] ?? 0) + 1), obg
+  }, {})
+
+  return result
+})
+
+const testObg = [
+  {
+    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=d8d20a65b1ac4f1690820d5cc796cc8b',
+    status: 'Ваша заявка отклонена'
+  },
+  {
+    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=a2f234a11cf4486580fe78f557a66f6f',
+    status: 'Карта одобрена!'
+  },
+  {
+    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=2d64597d610d46edb7e483419a098f4f',
+    status: 'Карта одобрена! Ждите звонка'
+  },
+  {
+    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=3373284b5f4a481281d56cbc34dd9d46',
+    status: 'Доставка назначена'
+  }
+]
 
 async function getDate() {
   currentStatus.value = downloadStatuses.gettingStatuses
@@ -75,6 +101,8 @@ async function getDate() {
     return parseUrls(urls)
   })
 
+  console.log(numberOfStatuses.value)
+
   currentStatus.value = downloadStatuses.displayResult
 }
 
@@ -84,12 +112,12 @@ function restart() {
 }
 
 async function runtimeMeasurement(fun) {
-  const start = performance.now();
+  const start = performance.now()
   try {
-    return await fun();
+    return await fun()
   } finally {
-    const end = performance.now();
-    console.log(`Скорость выполнения ${Math.floor((end - start) / 1000)} с`);
+    const end = performance.now()
+    console.log(`Скорость выполнения ${Math.floor((end - start) / 1000)} с`)
   }
 }
 </script>
