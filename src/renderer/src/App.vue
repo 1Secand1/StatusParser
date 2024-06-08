@@ -71,7 +71,9 @@ async function getDate() {
 
   let urls = textareaValue.value.split(/(?=https)/)
 
-  values.value = await runtimeMeasurement(parseUrls, urls)
+  values.value = await runtimeMeasurement(() => {
+    return parseUrls(urls)
+  })
 
   currentStatus.value = downloadStatuses.displayResult
 }
@@ -81,15 +83,14 @@ function restart() {
   currentStatus.value = downloadStatuses.referenceWaiting
 }
 
-async function runtimeMeasurement(fun, [...arg]) {
-  let result
-
-  const start = performance.now()
-  result = await fun(arg)
-  const end = performance.now()
-
-  console.log(`Скорость выполнения ${Math.floor((end - start) / 1000)} с`)
-  return result
+async function runtimeMeasurement(fun) {
+  const start = performance.now();
+  try {
+    return await fun();
+  } finally {
+    const end = performance.now();
+    console.log(`Скорость выполнения ${Math.floor((end - start) / 1000)} с`);
+  }
 }
 </script>
 
