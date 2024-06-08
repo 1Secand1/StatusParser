@@ -4,10 +4,28 @@
       <h1 class="header__title">StatusParser</h1>
       <span class="header__status"> {{ currentStatus }}</span>
     </div>
-    <br />
 
-    <div class="box">
-      <table v-show="currentStatus === downloadStatuses.displayResult" class="table">
+    <div v-show="currentStatus === downloadStatuses.displayResult" class="box">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Статус</th>
+            <th scope="col">Количество</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(value, kay) in numberOfStatuses" :key="kay">
+            <th style="width: 100%" scope="row">{{ kay }}</th>
+            <td style="text-align: center">
+              {{ value }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div v-show="currentStatus === downloadStatuses.displayResult" class="box">
+      <table class="table">
         <thead>
           <tr>
             <th scope="col">Статус</th>
@@ -73,25 +91,6 @@ const numberOfStatuses = computed(() => {
   return result
 })
 
-const testObg = [
-  {
-    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=d8d20a65b1ac4f1690820d5cc796cc8b',
-    status: 'Ваша заявка отклонена'
-  },
-  {
-    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=a2f234a11cf4486580fe78f557a66f6f',
-    status: 'Карта одобрена!'
-  },
-  {
-    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=2d64597d610d46edb7e483419a098f4f',
-    status: 'Карта одобрена! Ждите звонка'
-  },
-  {
-    url: 'https://anketa.alfabank.ru/cc-ui/tracking?appId=3373284b5f4a481281d56cbc34dd9d46',
-    status: 'Доставка назначена'
-  }
-]
-
 async function getDate() {
   currentStatus.value = downloadStatuses.gettingStatuses
 
@@ -100,8 +99,6 @@ async function getDate() {
   values.value = await runtimeMeasurement(() => {
     return parseUrls(urls)
   })
-
-  console.log(numberOfStatuses.value)
 
   currentStatus.value = downloadStatuses.displayResult
 }
@@ -173,7 +170,13 @@ async function runtimeMeasurement(fun) {
 }
 
 .box {
+  display: flex;
+  flex-direction: column;
   overflow-x: auto;
+  flex: 0 1 auto;
+  height: max-content;
+
+  min-height: 200px;
 }
 
 table {

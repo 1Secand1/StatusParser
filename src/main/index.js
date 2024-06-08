@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron') // Добав
 const { join } = require('path')
 const { electronApp, optimizer, is } = require('@electron-toolkit/utils')
 import icon from '../../resources/icon.png?asset'
+
 const puppeteer = require('puppeteer')
 
 async function parseUrls(urls) {
