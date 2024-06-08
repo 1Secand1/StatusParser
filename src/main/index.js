@@ -1,10 +1,70 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+const { app, BrowserWindow, ipcMain, shell } = require('electron') // Добавлен shell
+const { join } = require('path')
+const { electronApp, optimizer, is } = require('@electron-toolkit/utils')
 import icon from '../../resources/icon.png?asset'
+const puppeteer = require('puppeteer')
+
+async function parseUrls(urls) {
+  const browser = await puppeteer.launch()
+  const results = await Promise.all(urls.map((url) => parseUrl(browser, url)))
+  await browser.close()
+  return results
+}
+
+async function parseUrl(browser, url) {
+  const page = await browser.newPage()
+  await page.setRequestInterception(true)
+  page.on('request', (req) => {
+    if (['image', 'stylesheet', 'font', 'script'].includes(req.resourceType())) {
+      req.abort()
+    } else {
+      req.continue()
+    }
+  })
+
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded' })
+    const statusText = await extractStatusText(page)
+    return {
+      url,
+      status: statusText
+    }
+  } catch (error) {
+    console.error(`Error parsing ${url}:`, error)
+    return null
+  } finally {
+    await page.close()
+  }
+}
+
+async function extractStatusText(page) {
+  console.log('Начинаем получать данные')
+  const selectors = [
+    '[data-test-id="declineCardTitle"]',
+    '[data-test-id="trackingHeaderTitle"]',
+    '.typography__component_zd3y8.style_title__HWbSe.typography__system-small_xwmt7.typography__bold_zd3y8',
+    '.typography__component_zd3y8.style_title__VI4p_.typography__styrene-medium_1gfjy.typography__bold_zd3y8',
+    '#declineStatus',
+    '#approveStatus'
+  ]
+  for (const selector of selectors) {
+    const text = await getTextContentBySelector(page, selector)
+    console.log(text, selector)
+    if (text) {
+      return text
+    }
+  }
+  return null
+}
+
+async function getTextContentBySelector(page, selector) {
+  return page.evaluate((selector2) => {
+    const element = document.querySelector(selector2)
+    return element ? element.textContent : null
+  }, selector)
+}
 
 function createWindow() {
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
@@ -12,7 +72,7 @@ function createWindow() {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.js'), /
       sandbox: false
     }
   })
@@ -26,8 +86,11 @@ function createWindow() {
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault()
+    shell.openExternal(url)
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -35,40 +98,27 @@ function createWindow() {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.handle('parse-urls', async (event, urls) => {
+    const results = await parseUrls(urls)
+    return results
+  })
 
   createWindow()
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
