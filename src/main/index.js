@@ -1,15 +1,34 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron') // Добавлен shell
+const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const { join } = require('path')
 const { electronApp, optimizer, is } = require('@electron-toolkit/utils')
 import icon from '../../resources/icon.png?asset'
-
 const puppeteer = require('puppeteer')
 
 async function parseUrls(urls) {
-  const browser = await puppeteer.launch()
-  const results = await Promise.all(urls.map((url) => parseUrl(browser, url)))
-  await browser.close()
-  return results
+  console.log('Starting to parse URLs:', urls)
+
+  let browser
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    })
+    console.log('Puppeteer launched with bundled Chromium')
+  } catch (error) {
+    console.error('Error launching Puppeteer:', error)
+    throw new Error('Failed to launch Puppeteer')
+  }
+
+  try {
+    const results = await Promise.all(urls.map((url) => parseUrl(browser, url)))
+    console.log('Parsed results:', results)
+    return results
+  } catch (error) {
+    console.error('Error during parsing URLs:', error)
+    throw error
+  } finally {
+    await browser.close()
+  }
 }
 
 async function parseUrl(browser, url) {
@@ -107,8 +126,17 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('parse-urls', async (event, urls) => {
-    const results = await parseUrls(urls)
-    return results
+    if (!Array.isArray(urls)) {
+      const error = new Error('Invalid argument: urls should be an array')
+      return { error: error.message, stack: error.stack }
+    }
+    try {
+      const results = await parseUrls(urls)
+      return results
+    } catch (error) {
+      console.error('Error in parse-urls:', error)
+      return { error: error.message, stack: error.stack }
+    }
   })
 
   createWindow()

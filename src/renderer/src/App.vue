@@ -100,6 +100,8 @@ async function getDate() {
     return parseUrls(urls)
   })
 
+  console.log(toRaw(values.value))
+
   currentStatus.value = downloadStatuses.displayResult
 }
 
