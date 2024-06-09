@@ -79,7 +79,7 @@ const textareaValue = ref(
 
 const downloadStatuses = {
   referenceWaiting: 'ожидание ввода ссылок',
-  gettingStatuses: 'обработка данных..',
+  gettingStatuses: 'обработка данных',
   displayResult: ' данные получены'
 }
 const currentStatus = ref(downloadStatuses.referenceWaiting)
